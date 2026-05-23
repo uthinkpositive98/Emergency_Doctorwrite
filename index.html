@@ -596,10 +596,11 @@ async function loadPatientImgs(p){
       div.dataset.fname=fname;
       if(fid){
         const imgUrl=`https://drive.google.com/thumbnail?id=${fid}&sz=w400`;
+        const hiResUrl=`https://drive.google.com/thumbnail?id=${fid}&sz=w2000`;
         const fullUrl=`https://drive.google.com/file/d/${fid}/view`;
         const dateStr=parseDateFromFilename(fname);
         div.innerHTML=`<img src="${imgUrl}" alt="${fname}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\"err\\">⚠️ โหลดไม่ได้</div>'"><div class="img-date">${dateStr}</div>`;
-        div.onclick=()=>openLb(imgUrl, fname, fullUrl);
+        div.onclick=()=>openLb(hiResUrl, fname, fullUrl);
       } else {
         div.innerHTML='<div class="err">📭 ไม่พบใน Drive</div>';
       }
@@ -634,7 +635,13 @@ function parseDateFromFilename(fname){
 
 // ══════════════════ LIGHTBOX ══════════════════
 function openLb(src,name,fullUrl){
-  document.getElementById("lbImg").src=src;
+  const img=document.getElementById("lbImg");
+  // ถ้า src เป็น thumbnail w400 ให้ upgrade เป็น w2000 อัตโนมัติ
+  const hiSrc=src.replace(/sz=w\d+/,"sz=w2000");
+  img.src=""; // reset ก่อนเพื่อแสดง loading
+  img.style.opacity="0.4";
+  img.onload=()=>{img.style.opacity="1";};
+  img.src=hiSrc;
   document.getElementById("lbName").textContent=name;
   document.getElementById("lb").classList.add("show");
   document.getElementById("lb").dataset.fullUrl=fullUrl||"";
