@@ -576,40 +576,37 @@ async function getToken(){
 async function loadPatientImgs(p){
   const sec=document.getElementById("pimgs-section");
   const grid=document.getElementById("pimgs-grid");
-  if(!p.imgs||!p.imgs.length){sec.style.display="none";return;}
   sec.style.display="block";
-  grid.innerHTML="";
-  // Show placeholders
-  p.imgs.forEach(fname=>{
-    const div=document.createElement("div");
-    div.className="img-thumb";
-    div.innerHTML=`<div class="loading">⏳</div>`;
-    div.dataset.fname=fname;
-    grid.appendChild(div);
-  });
-  // Fetch token + search Drive
+  grid.innerHTML='<div class="img-thumb"><div class="loading">⏳</div></div>';
   try{
     const tok=await getToken();
-    // List files in folder
-    if(!Object.keys(driveFileMap).length){
-      await buildDriveIndex(tok);
-    }
-    p.imgs.forEach(fname=>{
-      const thumb=grid.querySelector(`[data-fname="${fname}"]`);
-      if(!thumb) return;
+    if(!Object.keys(driveFileMap).length){ await buildDriveIndex(tok); }
+    // สแกนจาก Drive โดยตรง หาไฟล์ที่ชื่อขึ้นต้นด้วย img_{id}_ หรือ draw_{id}_
+    const prefix1=`img_${p.id}_`;
+    const prefix2=`draw_${p.id}_`;
+    const matched=Object.keys(driveFileMap)
+      .filter(n=>n.startsWith(prefix1)||n.startsWith(prefix2))
+      .sort();
+    grid.innerHTML="";
+    if(!matched.length){ sec.style.display="none"; return; }
+    matched.forEach(fname=>{
       const fid=driveFileMap[fname];
+      const div=document.createElement("div");
+      div.className="img-thumb";
+      div.dataset.fname=fname;
       if(fid){
         const imgUrl=`https://drive.google.com/thumbnail?id=${fid}&sz=w400`;
         const fullUrl=`https://drive.google.com/file/d/${fid}/view`;
         const dateStr=parseDateFromFilename(fname);
-        thumb.innerHTML=`<img src="${imgUrl}" alt="${fname}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\"err\">⚠️ โหลดไม่ได้</div>'" onload="this.parentElement.querySelector?.('.loading')?.remove()"><div class="img-date">${dateStr}</div>`;
-        thumb.onclick=()=>openLb(imgUrl, fname, fullUrl);
+        div.innerHTML=`<img src="${imgUrl}" alt="${fname}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\"err\\">⚠️ โหลดไม่ได้</div>'"><div class="img-date">${dateStr}</div>`;
+        div.onclick=()=>openLb(imgUrl, fname, fullUrl);
       } else {
-        thumb.innerHTML=`<div class="err">📭 ไม่พบใน Drive</div>`;
+        div.innerHTML='<div class="err">📭 ไม่พบใน Drive</div>';
       }
+      grid.appendChild(div);
     });
   } catch(e){
-    grid.querySelectorAll(".img-thumb").forEach(t=>{t.innerHTML=`<div class="err">⚠️ ${e.message.slice(0,20)}</div>`;});
+    grid.innerHTML=`<div class="err">⚠️ ${e.message.slice(0,40)}</div>`;
   }
 }
 
