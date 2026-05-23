@@ -348,6 +348,48 @@ body{font-family:var(--font);background:var(--bg);color:var(--dark);min-height:1
 .lg-table td{padding:6px 8px;border-bottom:1px solid #eee}
 .lg-sum td{font-weight:700;background:#e8f5e9;border-top:2px solid #1a3f3a}
 
+
+/* ═══ Write section (merged) ═══ */
+.write-toggle-btn{display:none;width:100%;padding:13px 16px;background:linear-gradient(135deg,#6a1b9a,#7b1fa2);color:#fff;border:none;font-size:15px;font-weight:700;cursor:pointer;font-family:Sarabun,Arial,sans-serif;align-items:center;justify-content:center;gap:8px;border-radius:0;border-top:2px solid #4a148c}
+.write-toggle-btn:hover{opacity:.9}
+#writeSectionInner{display:none;border-top:2px solid #e0e0e0}
+.tt-room1{background:#bbdefb;color:#0d47a1}
+.tt-room2{background:#c8e6c9;color:#1b5e20}
+.tt-free{background:#e8eaf6;color:#283593}
+.tt-welcome{background:#fce4ec;color:#880e4f}
+/* Dblclick hint on card */
+.pt-card{cursor:pointer}
+.pt-card::after{content:'ดับเบิ้ลคลิกเพื่อดูเวชระเบียน';position:absolute;bottom:0;right:0;font-size:9px;color:#bbb;padding:2px 6px;pointer-events:none;opacity:0;transition:.2s}
+.pt-card:hover::after{opacity:1}
+
+
+/* ═══ TTS PANEL ═══ */
+.tts-panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10500;justify-content:center;align-items:flex-start;overflow-y:auto;padding:14px}
+.tts-panel-overlay.show{display:flex}
+.tts-panel{background:#f0f4f3;border-radius:16px;padding:16px;width:100%;max-width:560px;margin:auto;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.tts-panel h2{margin:0 0 12px;font-size:16px;color:#1a3f3a;border-bottom:2px solid #2bb5a0;padding-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.tts-section{background:#fff;border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.tts-section-hdr{font-size:12px;font-weight:700;color:#777;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.tts-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.tts-grid2{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px}
+.tp-btn{padding:8px 6px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Sarabun,Arial,sans-serif;transition:.15s;text-align:center;line-height:1.3}
+.tp-btn:hover{opacity:.82;transform:translateY(-1px)}
+.tp-blue{background:#e3f2fd;color:#1565c0}
+.tp-green{background:#e8f5e9;color:#1b5e20}
+.tp-orange{background:#fff3e0;color:#e65100}
+.tp-red{background:#fce4ec;color:#880e4f}
+.tp-teal{background:#e0f5f2;color:#00695c}
+.tp-purple{background:#f3e5f5;color:#6a1b9a}
+.tp-grey{background:#f5f5f5;color:#424242}
+.tp-yellow{background:#fffde7;color:#f57f17}
+.tts-walkin-row{display:flex;gap:6px;align-items:center;margin-top:6px}
+.tts-walkin-row select,.tts-walkin-row input{padding:7px;border:1.5px solid #ddd;border-radius:8px;font-family:Sarabun,Arial,sans-serif;font-size:13px}
+.tts-walkin-row button{flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;background:#e8eaf6;color:#283593;font-family:Sarabun,Arial,sans-serif}
+.tp-full{grid-column:1/-1}
+/* 💬 icon button on card */
+.card-tts-btn{padding:6px 10px;border:none;border-radius:8px;background:#e0f5f2;color:#00695c;font-size:16px;font-weight:700;cursor:pointer;transition:.15s}
+.card-tts-btn:hover{background:#b2dfdb;transform:translateY(-1px)}
+
 </style>
 </head>
 <body>
@@ -374,8 +416,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--dark);min-height:1
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('queue')">📋 คิววันนี้</div>
-  <div class="tab" onclick="switchTab('search')">🔍 ค้นหา</div>
-  <div class="tab" onclick="switchTab('draw')">✍️ เขียนบันทึก</div>
+  <div class="tab" onclick="switchTab('search')">🔍 เวชระเบียน</div>
 </div>
 
 <div class="main">
@@ -440,15 +481,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--dark);min-height:1
       <div class="imgs-section" id="pimgs-section" style="display:none">
         <h4>🖼️ รูปเวชระเบียน (จาก Google Drive)</h4>
         <div class="imgs-grid" id="pimgs-grid"></div>
+        <div style="text-align:center;padding:12px 0 4px">
+          <button onclick="showWrite()" style="padding:10px 28px;background:linear-gradient(135deg,#6a1b9a,#7b1fa2);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:Sarabun,Arial,sans-serif">✏️ เขียนบันทึก</button>
+        </div>
       </div>
     </div>
 
-  </div><!-- /pane-search -->
 
-  <!-- ===== TAB: เขียนบันทึก ===== -->
-  <div class="pane" id="pane-draw">
-
-    <!-- Select patient reminder -->
+      <!-- ═══ WRITE SECTION ═══ -->
+      <button class="write-toggle-btn" id="writeToggleBtn" onclick="toggleWrite()" style="display:none">
+        ✏️ เขียนบันทึก / วาดแผนภาพ
+      </button>
+      <div id="writeSectionInner">
+        <!-- Select patient reminder -->
     <div id="no-pt-warn" style="background:#fff8e1;border:2px solid #f4a261;border-radius:12px;padding:14px 16px;margin-bottom:14px;font-size:13px;color:#8a5a00;display:flex;gap:8px;align-items:center">
       <span style="font-size:20px">⚠️</span>
       <span>กรุณา<strong>ค้นหาและเลือกคนไข้</strong>ในแท็บแรกก่อนเขียนบันทึก</span>
@@ -517,8 +562,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--dark);min-height:1
       <div style="padding:10px 14px 6px;font-size:11px;color:var(--mid);font-weight:600;text-transform:uppercase;letter-spacing:.5px">🖼️ บันทึกแล้วในเซสชันนี้</div>
       <div id="sessGrid" class="sess-grid"><div class="empty-sess">📭 ยังไม่มีรูป</div></div>
     </div>
+      </div>
+    <!-- /write section -->
 
-  </div><!-- /pane-draw -->
+  </div><!-- /pane-search -->
 
 </div><!-- /main -->
 
@@ -601,17 +648,16 @@ function setToday(){
 // ══════════════════ TABS ══════════════════
 function switchTab(t){
   document.querySelectorAll(".tab").forEach((el,i)=>{
-    el.classList.toggle("active",(i===0&&t==="queue")||(i===1&&t==="search")||(i===2&&t==="draw"));
+    el.classList.toggle("active",(i===0&&t==="queue")||(i===1&&t==="search"));
   });
   document.getElementById("pane-queue").classList.toggle("active",t==="queue");
   document.getElementById("pane-search").classList.toggle("active",t==="search");
-  document.getElementById("pane-draw").classList.toggle("active",t==="draw");
   updateDrawWarn();
-  if(t==="draw") setTimeout(()=>szCv(), 60);
 }
 
 function updateDrawWarn(){
-  document.getElementById("no-pt-warn").style.display = curPt ? "none" : "flex";
+  const el=document.getElementById("no-pt-warn");
+  if(el) el.style.display=curPt?"none":"flex";
 }
 
 // ══════════════════ SEARCH ══════════════════
@@ -1503,6 +1549,96 @@ function printReceipt(){
   </div>
 </div></div>
 
+
+<!-- ══ TTS PANEL MODAL ══ -->
+<div class="tts-panel-overlay" id="ttsPanelModal">
+<div class="tts-panel">
+  <h2>💬 อ่านออกเสียง &mdash; <span id="ttsPanelPt" style="color:#2bb5a0"></span>
+    <button onclick="closeTtsPanel()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;line-height:1">✕</button>
+  </h2>
+
+  <!-- ── ส่วนที่ 1: ประโยคพร้อมอ่าน ── -->
+  <div class="tts-section">
+    <div class="tts-section-hdr">📢 ประโยคพร้อมอ่าน (1.5×)</div>
+    <div class="tts-grid" style="margin-bottom:6px">
+      <button class="tp-btn tp-teal"   onclick="tp('greeting')">👋 Greeting</button>
+      <button class="tp-btn tp-blue"   onclick="tp('card')">📋 แจ้งเสียบบัตร</button>
+      <button class="tp-btn tp-blue"   onclick="tp('ask')">🧑 สอบถามคนไข้</button>
+      <button class="tp-btn tp-red"    onclick="tp('bp')">❤️ เครื่องวัดความดัน</button>
+      <button class="tp-btn tp-green"  onclick="tp('social')">🏥 Social welfare?</button>
+      <button class="tp-btn tp-grey"   onclick="tp('wait')">⏳ Wait Assistant</button>
+      <button class="tp-btn tp-orange" onclick="tp('inscard')">💳 เสียบบัตร ปกส.</button>
+      <button class="tp-btn tp-orange" onclick="tp('ding')">🔔 ดิงบัตรออก</button>
+      <button class="tp-btn tp-purple" onclick="tp('medcert')">📄 ใบรับรองแพทย์</button>
+      <button class="tp-btn tp-purple" onclick="tp('rcptbiz')">🧾 ใบเสร็จเบิกบริษัท</button>
+      <button class="tp-btn tp-teal"   onclick="tp('nocharge0')">🆓 ไม่มีค่าบริการ</button>
+      <button class="tp-btn tp-grey"   onclick="openTtsCustom()">✏️ พิมพ์เอง</button>
+    </div>
+    <div class="tts-walkin-row">
+      <select id="tpWalkTime" style="width:90px">
+        <option>08:00</option><option>08:30</option><option>09:00</option>
+        <option>09:30</option><option>10:00</option><option>10:30</option>
+        <option>11:00</option><option>11:30</option><option>12:00</option>
+        <option>12:30</option><option>13:00</option><option>13:30</option>
+        <option>14:00</option><option>14:30</option><option>15:00</option>
+      </select>
+      <button onclick="tp('walkin')" style="background:#e8eaf6;color:#283593;padding:7px 10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Sarabun,Arial,sans-serif;flex:1">
+        🚶 คนใช้ Walk in: ถามคิวว่างที่โมง
+      </button>
+    </div>
+  </div>
+
+  <!-- ── ส่วนที่ 2: คำนวณวันนัด + เช็คคิวว่าง ── -->
+  <div class="tts-section">
+    <div class="tts-section-hdr">📅 คำนวณวันนัด + เช็คคิวว่าง (1.5×)</div>
+    <div class="tts-grid2" style="margin-bottom:6px">
+      <button class="tp-btn tp-blue"  onclick="tp('appt1w')">1 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt2w')">2 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt3w')">3 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt4w')">4 week</button>
+      <button class="tp-btn tp-green" onclick="tp('appt1m')">1 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt1h')">1.5 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt2m')">2 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt3m')">3 month</button>
+    </div>
+    <div class="tts-grid" style="margin-bottom:6px">
+      <button class="tp-btn tp-yellow" onclick="openApptFromTts()">📅 คนใช้เลือกวันเวลา</button>
+      <button class="tp-btn tp-grey"   onclick="tp('wait2')">⏳ ได้ค่ะ รอลักครู่นะคะ</button>
+      <button class="tp-btn tp-teal"   onclick="tp('booked')">✅ ลงนัดเรียบร้อย</button>
+      <button class="tp-btn tp-blue"   onclick="tp('callpt')">🔊 เรียกคนไข้</button>
+      <button class="tp-btn tp-orange" onclick="tp('pay')">💰 คิดเงิน</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam1')">🔊 เข้าห้องตรวจ</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam1r')">🔊 ห้องตรวจ 1</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam2r')">🔊 ห้องตรวจ 2</button>
+      <button class="tp-btn tp-green"  onclick="tp('bye')">👋 กล่าวลา</button>
+    </div>
+    <div class="tts-walkin-row">
+      <select id="tpFreeDur" style="width:110px">
+        <option value="1 สัปดาห์">1 week</option>
+        <option value="2 สัปดาห์">2 week</option>
+        <option value="1 เดือน">1 month</option>
+        <option value="2 เดือน">2 month</option>
+        <option value="3 เดือน">3 month</option>
+      </select>
+      <button onclick="tp('freewappt')" style="background:#e8f5e9;color:#1b5e20;padding:7px 10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Sarabun,Arial,sans-serif;flex:1">
+        🆓 ไม่มีค่าใช้จ่าย แต่มีนัด
+      </button>
+    </div>
+    <button class="tp-btn" onclick="tp('wai')" style="background:#fff8e1;color:#f57f17;width:100%;margin-top:8px;padding:10px;font-size:18px">🙏</button>
+  </div>
+
+  <!-- ── ส่วนที่ 3: พิมพ์เอง ── -->
+  <div class="tts-section" id="ttsCustomSection" style="display:none">
+    <div class="tts-section-hdr">✏️ พิมพ์ข้อความเอง</div>
+    <textarea id="ttsCustomText" rows="3" style="width:100%;padding:9px;border:1.5px solid #ddd;border-radius:8px;font-family:Sarabun,Arial,sans-serif;font-size:15px;box-sizing:border-box;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button onclick="ttsSpeak(document.getElementById('ttsCustomText').value)" style="flex:2;padding:10px;background:#2bb5a0;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;font-family:Sarabun,Arial,sans-serif">🔊 อ่านออกเสียง</button>
+      <button onclick="window.speechSynthesis.cancel()" style="flex:1;padding:10px;background:#f5f5f5;color:#555;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:Sarabun,Arial,sans-serif">⏹ หยุด</button>
+    </div>
+  </div>
+
+</div></div>
+
 </body></html>`);
   w.document.close();
 }
@@ -1641,6 +1777,96 @@ function printCert(){
     <button class="doc-btn" style="background:#e3f2fd;color:#1565c0;font-weight:700" onclick="window.speechSynthesis.cancel()">⏹ หยุด</button>
     <button class="doc-btn doc-btn-cancel" onclick="document.getElementById('ttsModal').classList.remove('show')">ปิด</button>
   </div>
+</div></div>
+
+
+<!-- ══ TTS PANEL MODAL ══ -->
+<div class="tts-panel-overlay" id="ttsPanelModal">
+<div class="tts-panel">
+  <h2>💬 อ่านออกเสียง &mdash; <span id="ttsPanelPt" style="color:#2bb5a0"></span>
+    <button onclick="closeTtsPanel()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;line-height:1">✕</button>
+  </h2>
+
+  <!-- ── ส่วนที่ 1: ประโยคพร้อมอ่าน ── -->
+  <div class="tts-section">
+    <div class="tts-section-hdr">📢 ประโยคพร้อมอ่าน (1.5×)</div>
+    <div class="tts-grid" style="margin-bottom:6px">
+      <button class="tp-btn tp-teal"   onclick="tp('greeting')">👋 Greeting</button>
+      <button class="tp-btn tp-blue"   onclick="tp('card')">📋 แจ้งเสียบบัตร</button>
+      <button class="tp-btn tp-blue"   onclick="tp('ask')">🧑 สอบถามคนไข้</button>
+      <button class="tp-btn tp-red"    onclick="tp('bp')">❤️ เครื่องวัดความดัน</button>
+      <button class="tp-btn tp-green"  onclick="tp('social')">🏥 Social welfare?</button>
+      <button class="tp-btn tp-grey"   onclick="tp('wait')">⏳ Wait Assistant</button>
+      <button class="tp-btn tp-orange" onclick="tp('inscard')">💳 เสียบบัตร ปกส.</button>
+      <button class="tp-btn tp-orange" onclick="tp('ding')">🔔 ดิงบัตรออก</button>
+      <button class="tp-btn tp-purple" onclick="tp('medcert')">📄 ใบรับรองแพทย์</button>
+      <button class="tp-btn tp-purple" onclick="tp('rcptbiz')">🧾 ใบเสร็จเบิกบริษัท</button>
+      <button class="tp-btn tp-teal"   onclick="tp('nocharge0')">🆓 ไม่มีค่าบริการ</button>
+      <button class="tp-btn tp-grey"   onclick="openTtsCustom()">✏️ พิมพ์เอง</button>
+    </div>
+    <div class="tts-walkin-row">
+      <select id="tpWalkTime" style="width:90px">
+        <option>08:00</option><option>08:30</option><option>09:00</option>
+        <option>09:30</option><option>10:00</option><option>10:30</option>
+        <option>11:00</option><option>11:30</option><option>12:00</option>
+        <option>12:30</option><option>13:00</option><option>13:30</option>
+        <option>14:00</option><option>14:30</option><option>15:00</option>
+      </select>
+      <button onclick="tp('walkin')" style="background:#e8eaf6;color:#283593;padding:7px 10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Sarabun,Arial,sans-serif;flex:1">
+        🚶 คนใช้ Walk in: ถามคิวว่างที่โมง
+      </button>
+    </div>
+  </div>
+
+  <!-- ── ส่วนที่ 2: คำนวณวันนัด + เช็คคิวว่าง ── -->
+  <div class="tts-section">
+    <div class="tts-section-hdr">📅 คำนวณวันนัด + เช็คคิวว่าง (1.5×)</div>
+    <div class="tts-grid2" style="margin-bottom:6px">
+      <button class="tp-btn tp-blue"  onclick="tp('appt1w')">1 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt2w')">2 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt3w')">3 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt4w')">4 week</button>
+      <button class="tp-btn tp-green" onclick="tp('appt1m')">1 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt1h')">1.5 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt2m')">2 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt3m')">3 month</button>
+    </div>
+    <div class="tts-grid" style="margin-bottom:6px">
+      <button class="tp-btn tp-yellow" onclick="openApptFromTts()">📅 คนใช้เลือกวันเวลา</button>
+      <button class="tp-btn tp-grey"   onclick="tp('wait2')">⏳ ได้ค่ะ รอลักครู่นะคะ</button>
+      <button class="tp-btn tp-teal"   onclick="tp('booked')">✅ ลงนัดเรียบร้อย</button>
+      <button class="tp-btn tp-blue"   onclick="tp('callpt')">🔊 เรียกคนไข้</button>
+      <button class="tp-btn tp-orange" onclick="tp('pay')">💰 คิดเงิน</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam1')">🔊 เข้าห้องตรวจ</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam1r')">🔊 ห้องตรวจ 1</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam2r')">🔊 ห้องตรวจ 2</button>
+      <button class="tp-btn tp-green"  onclick="tp('bye')">👋 กล่าวลา</button>
+    </div>
+    <div class="tts-walkin-row">
+      <select id="tpFreeDur" style="width:110px">
+        <option value="1 สัปดาห์">1 week</option>
+        <option value="2 สัปดาห์">2 week</option>
+        <option value="1 เดือน">1 month</option>
+        <option value="2 เดือน">2 month</option>
+        <option value="3 เดือน">3 month</option>
+      </select>
+      <button onclick="tp('freewappt')" style="background:#e8f5e9;color:#1b5e20;padding:7px 10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Sarabun,Arial,sans-serif;flex:1">
+        🆓 ไม่มีค่าใช้จ่าย แต่มีนัด
+      </button>
+    </div>
+    <button class="tp-btn" onclick="tp('wai')" style="background:#fff8e1;color:#f57f17;width:100%;margin-top:8px;padding:10px;font-size:18px">🙏</button>
+  </div>
+
+  <!-- ── ส่วนที่ 3: พิมพ์เอง ── -->
+  <div class="tts-section" id="ttsCustomSection" style="display:none">
+    <div class="tts-section-hdr">✏️ พิมพ์ข้อความเอง</div>
+    <textarea id="ttsCustomText" rows="3" style="width:100%;padding:9px;border:1.5px solid #ddd;border-radius:8px;font-family:Sarabun,Arial,sans-serif;font-size:15px;box-sizing:border-box;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button onclick="ttsSpeak(document.getElementById('ttsCustomText').value)" style="flex:2;padding:10px;background:#2bb5a0;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;font-family:Sarabun,Arial,sans-serif">🔊 อ่านออกเสียง</button>
+      <button onclick="window.speechSynthesis.cancel()" style="flex:1;padding:10px;background:#f5f5f5;color:#555;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:Sarabun,Arial,sans-serif">⏹ หยุด</button>
+    </div>
+  </div>
+
 </div></div>
 
 </body></html>`);
@@ -1801,6 +2027,96 @@ async function saveAndPrintAppt(){
   </div>
 </div></div>
 
+
+<!-- ══ TTS PANEL MODAL ══ -->
+<div class="tts-panel-overlay" id="ttsPanelModal">
+<div class="tts-panel">
+  <h2>💬 อ่านออกเสียง &mdash; <span id="ttsPanelPt" style="color:#2bb5a0"></span>
+    <button onclick="closeTtsPanel()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;line-height:1">✕</button>
+  </h2>
+
+  <!-- ── ส่วนที่ 1: ประโยคพร้อมอ่าน ── -->
+  <div class="tts-section">
+    <div class="tts-section-hdr">📢 ประโยคพร้อมอ่าน (1.5×)</div>
+    <div class="tts-grid" style="margin-bottom:6px">
+      <button class="tp-btn tp-teal"   onclick="tp('greeting')">👋 Greeting</button>
+      <button class="tp-btn tp-blue"   onclick="tp('card')">📋 แจ้งเสียบบัตร</button>
+      <button class="tp-btn tp-blue"   onclick="tp('ask')">🧑 สอบถามคนไข้</button>
+      <button class="tp-btn tp-red"    onclick="tp('bp')">❤️ เครื่องวัดความดัน</button>
+      <button class="tp-btn tp-green"  onclick="tp('social')">🏥 Social welfare?</button>
+      <button class="tp-btn tp-grey"   onclick="tp('wait')">⏳ Wait Assistant</button>
+      <button class="tp-btn tp-orange" onclick="tp('inscard')">💳 เสียบบัตร ปกส.</button>
+      <button class="tp-btn tp-orange" onclick="tp('ding')">🔔 ดิงบัตรออก</button>
+      <button class="tp-btn tp-purple" onclick="tp('medcert')">📄 ใบรับรองแพทย์</button>
+      <button class="tp-btn tp-purple" onclick="tp('rcptbiz')">🧾 ใบเสร็จเบิกบริษัท</button>
+      <button class="tp-btn tp-teal"   onclick="tp('nocharge0')">🆓 ไม่มีค่าบริการ</button>
+      <button class="tp-btn tp-grey"   onclick="openTtsCustom()">✏️ พิมพ์เอง</button>
+    </div>
+    <div class="tts-walkin-row">
+      <select id="tpWalkTime" style="width:90px">
+        <option>08:00</option><option>08:30</option><option>09:00</option>
+        <option>09:30</option><option>10:00</option><option>10:30</option>
+        <option>11:00</option><option>11:30</option><option>12:00</option>
+        <option>12:30</option><option>13:00</option><option>13:30</option>
+        <option>14:00</option><option>14:30</option><option>15:00</option>
+      </select>
+      <button onclick="tp('walkin')" style="background:#e8eaf6;color:#283593;padding:7px 10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Sarabun,Arial,sans-serif;flex:1">
+        🚶 คนใช้ Walk in: ถามคิวว่างที่โมง
+      </button>
+    </div>
+  </div>
+
+  <!-- ── ส่วนที่ 2: คำนวณวันนัด + เช็คคิวว่าง ── -->
+  <div class="tts-section">
+    <div class="tts-section-hdr">📅 คำนวณวันนัด + เช็คคิวว่าง (1.5×)</div>
+    <div class="tts-grid2" style="margin-bottom:6px">
+      <button class="tp-btn tp-blue"  onclick="tp('appt1w')">1 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt2w')">2 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt3w')">3 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt4w')">4 week</button>
+      <button class="tp-btn tp-green" onclick="tp('appt1m')">1 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt1h')">1.5 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt2m')">2 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt3m')">3 month</button>
+    </div>
+    <div class="tts-grid" style="margin-bottom:6px">
+      <button class="tp-btn tp-yellow" onclick="openApptFromTts()">📅 คนใช้เลือกวันเวลา</button>
+      <button class="tp-btn tp-grey"   onclick="tp('wait2')">⏳ ได้ค่ะ รอลักครู่นะคะ</button>
+      <button class="tp-btn tp-teal"   onclick="tp('booked')">✅ ลงนัดเรียบร้อย</button>
+      <button class="tp-btn tp-blue"   onclick="tp('callpt')">🔊 เรียกคนไข้</button>
+      <button class="tp-btn tp-orange" onclick="tp('pay')">💰 คิดเงิน</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam1')">🔊 เข้าห้องตรวจ</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam1r')">🔊 ห้องตรวจ 1</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam2r')">🔊 ห้องตรวจ 2</button>
+      <button class="tp-btn tp-green"  onclick="tp('bye')">👋 กล่าวลา</button>
+    </div>
+    <div class="tts-walkin-row">
+      <select id="tpFreeDur" style="width:110px">
+        <option value="1 สัปดาห์">1 week</option>
+        <option value="2 สัปดาห์">2 week</option>
+        <option value="1 เดือน">1 month</option>
+        <option value="2 เดือน">2 month</option>
+        <option value="3 เดือน">3 month</option>
+      </select>
+      <button onclick="tp('freewappt')" style="background:#e8f5e9;color:#1b5e20;padding:7px 10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Sarabun,Arial,sans-serif;flex:1">
+        🆓 ไม่มีค่าใช้จ่าย แต่มีนัด
+      </button>
+    </div>
+    <button class="tp-btn" onclick="tp('wai')" style="background:#fff8e1;color:#f57f17;width:100%;margin-top:8px;padding:10px;font-size:18px">🙏</button>
+  </div>
+
+  <!-- ── ส่วนที่ 3: พิมพ์เอง ── -->
+  <div class="tts-section" id="ttsCustomSection" style="display:none">
+    <div class="tts-section-hdr">✏️ พิมพ์ข้อความเอง</div>
+    <textarea id="ttsCustomText" rows="3" style="width:100%;padding:9px;border:1.5px solid #ddd;border-radius:8px;font-family:Sarabun,Arial,sans-serif;font-size:15px;box-sizing:border-box;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button onclick="ttsSpeak(document.getElementById('ttsCustomText').value)" style="flex:2;padding:10px;background:#2bb5a0;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;font-family:Sarabun,Arial,sans-serif">🔊 อ่านออกเสียง</button>
+      <button onclick="window.speechSynthesis.cancel()" style="flex:1;padding:10px;background:#f5f5f5;color:#555;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:Sarabun,Arial,sans-serif">⏹ หยุด</button>
+    </div>
+  </div>
+
+</div></div>
+
 </body></html>`);
   w.document.close();
 }
@@ -1865,6 +2181,7 @@ function mkCard(q){
   const d=document.createElement('div');
   d.className='pt-card'+(done?' card-done':'');
   d.id='card_'+q.uid;
+  d.ondblclick=()=>{ if(q.pid&&PATIENTS.find(x=>x.id===q.pid)){selectPt(q.pid);} switchTab('search'); const wtb=document.getElementById('writeToggleBtn');if(wtb)wtb.style.display='flex'; setTimeout(()=>document.getElementById('pane-search')?.scrollIntoView({behavior:'smooth'}),80); };
   d.innerHTML=`
 <div class="pch">
   <div>
@@ -1876,10 +2193,7 @@ function mkCard(q){
 <input class="card-note" value="${(q.note||'').replace(/"/g,'&quot;')}" placeholder="บันทึก / รายการรักษา..."
   onchange="qNote('${q.uid}',this.value)">
 <div class="tts-row">
-  <button class="tt tt-exam" onclick="ttsExam('${sn}')">🔊 เรียกเข้าห้อง</button>
-  <button class="tt tt-pay"  onclick="ttsPay('${sn}')">💰 ชำระเงิน</button>
-  <button class="tt tt-bye"  onclick="ttsBye('${sn}')">👋 กล่าวลา</button>
-  <button class="tt tt-free" onclick="openTts('${sn}')">✏️ พิมพ์เอง</button>
+  <button class="card-tts-btn" onclick="openTtsPanel('${sn}','${q.uid}')" title="อ่านออกเสียง">💬 อ่านออกเสียง</button>
 </div>
 <div class="ca-row">
   ${done
@@ -2036,9 +2350,198 @@ td{padding:6px 8px;border-bottom:1px solid #eee}.sum td{font-weight:700;backgrou
 <tbody>${rows}</tbody>
 <tfoot><tr class="sum"><td colspan="4" style="text-align:right;padding:8px">รวมทั้งวัน</td>
 <td style="text-align:right;padding:8px">${tot.toLocaleString()}</td></tr></tfoot></table>
+
+<!-- ══ TTS PANEL MODAL ══ -->
+<div class="tts-panel-overlay" id="ttsPanelModal">
+<div class="tts-panel">
+  <h2>💬 อ่านออกเสียง &mdash; <span id="ttsPanelPt" style="color:#2bb5a0"></span>
+    <button onclick="closeTtsPanel()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;line-height:1">✕</button>
+  </h2>
+
+  <!-- ── ส่วนที่ 1: ประโยคพร้อมอ่าน ── -->
+  <div class="tts-section">
+    <div class="tts-section-hdr">📢 ประโยคพร้อมอ่าน (1.5×)</div>
+    <div class="tts-grid" style="margin-bottom:6px">
+      <button class="tp-btn tp-teal"   onclick="tp('greeting')">👋 Greeting</button>
+      <button class="tp-btn tp-blue"   onclick="tp('card')">📋 แจ้งเสียบบัตร</button>
+      <button class="tp-btn tp-blue"   onclick="tp('ask')">🧑 สอบถามคนไข้</button>
+      <button class="tp-btn tp-red"    onclick="tp('bp')">❤️ เครื่องวัดความดัน</button>
+      <button class="tp-btn tp-green"  onclick="tp('social')">🏥 Social welfare?</button>
+      <button class="tp-btn tp-grey"   onclick="tp('wait')">⏳ Wait Assistant</button>
+      <button class="tp-btn tp-orange" onclick="tp('inscard')">💳 เสียบบัตร ปกส.</button>
+      <button class="tp-btn tp-orange" onclick="tp('ding')">🔔 ดิงบัตรออก</button>
+      <button class="tp-btn tp-purple" onclick="tp('medcert')">📄 ใบรับรองแพทย์</button>
+      <button class="tp-btn tp-purple" onclick="tp('rcptbiz')">🧾 ใบเสร็จเบิกบริษัท</button>
+      <button class="tp-btn tp-teal"   onclick="tp('nocharge0')">🆓 ไม่มีค่าบริการ</button>
+      <button class="tp-btn tp-grey"   onclick="openTtsCustom()">✏️ พิมพ์เอง</button>
+    </div>
+    <div class="tts-walkin-row">
+      <select id="tpWalkTime" style="width:90px">
+        <option>08:00</option><option>08:30</option><option>09:00</option>
+        <option>09:30</option><option>10:00</option><option>10:30</option>
+        <option>11:00</option><option>11:30</option><option>12:00</option>
+        <option>12:30</option><option>13:00</option><option>13:30</option>
+        <option>14:00</option><option>14:30</option><option>15:00</option>
+      </select>
+      <button onclick="tp('walkin')" style="background:#e8eaf6;color:#283593;padding:7px 10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Sarabun,Arial,sans-serif;flex:1">
+        🚶 คนใช้ Walk in: ถามคิวว่างที่โมง
+      </button>
+    </div>
+  </div>
+
+  <!-- ── ส่วนที่ 2: คำนวณวันนัด + เช็คคิวว่าง ── -->
+  <div class="tts-section">
+    <div class="tts-section-hdr">📅 คำนวณวันนัด + เช็คคิวว่าง (1.5×)</div>
+    <div class="tts-grid2" style="margin-bottom:6px">
+      <button class="tp-btn tp-blue"  onclick="tp('appt1w')">1 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt2w')">2 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt3w')">3 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt4w')">4 week</button>
+      <button class="tp-btn tp-green" onclick="tp('appt1m')">1 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt1h')">1.5 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt2m')">2 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt3m')">3 month</button>
+    </div>
+    <div class="tts-grid" style="margin-bottom:6px">
+      <button class="tp-btn tp-yellow" onclick="openApptFromTts()">📅 คนใช้เลือกวันเวลา</button>
+      <button class="tp-btn tp-grey"   onclick="tp('wait2')">⏳ ได้ค่ะ รอลักครู่นะคะ</button>
+      <button class="tp-btn tp-teal"   onclick="tp('booked')">✅ ลงนัดเรียบร้อย</button>
+      <button class="tp-btn tp-blue"   onclick="tp('callpt')">🔊 เรียกคนไข้</button>
+      <button class="tp-btn tp-orange" onclick="tp('pay')">💰 คิดเงิน</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam1')">🔊 เข้าห้องตรวจ</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam1r')">🔊 ห้องตรวจ 1</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam2r')">🔊 ห้องตรวจ 2</button>
+      <button class="tp-btn tp-green"  onclick="tp('bye')">👋 กล่าวลา</button>
+    </div>
+    <div class="tts-walkin-row">
+      <select id="tpFreeDur" style="width:110px">
+        <option value="1 สัปดาห์">1 week</option>
+        <option value="2 สัปดาห์">2 week</option>
+        <option value="1 เดือน">1 month</option>
+        <option value="2 เดือน">2 month</option>
+        <option value="3 เดือน">3 month</option>
+      </select>
+      <button onclick="tp('freewappt')" style="background:#e8f5e9;color:#1b5e20;padding:7px 10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Sarabun,Arial,sans-serif;flex:1">
+        🆓 ไม่มีค่าใช้จ่าย แต่มีนัด
+      </button>
+    </div>
+    <button class="tp-btn" onclick="tp('wai')" style="background:#fff8e1;color:#f57f17;width:100%;margin-top:8px;padding:10px;font-size:18px">🙏</button>
+  </div>
+
+  <!-- ── ส่วนที่ 3: พิมพ์เอง ── -->
+  <div class="tts-section" id="ttsCustomSection" style="display:none">
+    <div class="tts-section-hdr">✏️ พิมพ์ข้อความเอง</div>
+    <textarea id="ttsCustomText" rows="3" style="width:100%;padding:9px;border:1.5px solid #ddd;border-radius:8px;font-family:Sarabun,Arial,sans-serif;font-size:15px;box-sizing:border-box;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button onclick="ttsSpeak(document.getElementById('ttsCustomText').value)" style="flex:2;padding:10px;background:#2bb5a0;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;font-family:Sarabun,Arial,sans-serif">🔊 อ่านออกเสียง</button>
+      <button onclick="window.speechSynthesis.cancel()" style="flex:1;padding:10px;background:#f5f5f5;color:#555;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:Sarabun,Arial,sans-serif">⏹ หยุด</button>
+    </div>
+  </div>
+
+</div></div>
+
 </body></html>`);
   w.document.close();
 }
+
+
+// ── Write section toggle ─────────────────────────────────
+function showWrite(){
+  const btn=document.getElementById('writeToggleBtn');
+  const sec=document.getElementById('writeSectionInner');
+  if(btn) btn.style.display='flex';
+  if(sec){ sec.style.display='block'; szCv(); }
+  setTimeout(()=>document.getElementById('writeToggleBtn')?.scrollIntoView({behavior:'smooth',block:'start'}),120);
+}
+function toggleWrite(){
+  const sec=document.getElementById('writeSectionInner');
+  const btn=document.getElementById('writeToggleBtn');
+  const shown=sec.style.display!=='none';
+  sec.style.display=shown?'none':'block';
+  btn.innerHTML=(shown?'▼':'▲')+' ✏️ เขียนบันทึก / วาดแผนภาพ';
+  if(!shown){ szCv(); setTimeout(()=>sec.scrollIntoView({behavior:'smooth',block:'start'}),120); }
+}
+
+// ── Extra TTS functions ───────────────────────────────────
+function ttsRoom1(n){ ttsSpeak(`เรียน คุณ${n} กรุณาเข้าห้องตรวจที่หนึ่งได้เลยค่ะ`); }
+function ttsRoom2(n){ ttsSpeak(`เรียน คุณ${n} กรุณาเข้าห้องตรวจที่สองได้เลยค่ะ`); }
+function ttsFree(n){ ttsSpeak(`เรียน คุณ${n} วันนี้ไม่มีค่าใช้จ่ายนะคะ ขอบคุณที่ใช้บริการค่ะ`); }
+function ttsWelcome(){ ttsSpeak(`ยินดีต้อนรับสู่คลินิกทันตกรรมบางปะอินค่ะ บริการด้วยใจ ห่วงใยสุขภาพฟันของท่านค่ะ`); }
+
+
+// ══════════════════════════════════════════════════════════
+//  TTS PANEL
+// ══════════════════════════════════════════════════════════
+let _tpName = '';  // current patient short name for TTS panel
+
+function openTtsPanel(shortName, uid){
+  _tpName = shortName || '';
+  document.getElementById('ttsPanelPt').textContent = shortName ? 'คุณ'+shortName : '';
+  document.getElementById('ttsCustomSection').style.display = 'none';
+  document.getElementById('ttsCustomText').value = shortName ? 'คุณ'+shortName+' ' : '';
+  document.getElementById('ttsPanelModal').classList.add('show');
+}
+function closeTtsPanel(){
+  document.getElementById('ttsPanelModal').classList.remove('show');
+  window.speechSynthesis.cancel();
+}
+function openTtsCustom(){
+  const s = document.getElementById('ttsCustomSection');
+  s.style.display = s.style.display==='none' ? 'block' : 'none';
+}
+function openApptFromTts(){
+  closeTtsPanel();
+  openApptModal();
+}
+
+// ── ข้อความแต่ละปุ่ม ─────────────────────────────────────
+function tp(key){
+  const n = _tpName;
+  const cn = n ? 'คุณ'+n : 'คุณ';
+  const walkTime = document.getElementById('tpWalkTime')?.value || '';
+  const freeDur  = document.getElementById('tpFreeDur')?.value  || '1 สัปดาห์';
+  const msgs = {
+    // ── Section 1 ──
+    greeting:   'ยินดีต้อนรับสู่คลินิกทันตกรรมบางปะอินค่ะ บริการด้วยใจ ห่วงใยสุขภาพฟันของท่านค่ะ',
+    card:       'กรุณาเสียบบัตรประชาชนในเครื่องเสียบบัตรด้านหน้าเคาน์เตอร์ด้วยนะคะ',
+    ask:        `${cn} วันนี้มาด้วยอาการอะไรคะ`,
+    bp:         'กรุณาวัดความดันโลหิตที่เครื่องข้างเคาน์เตอร์ก่อนพบทันตแพทย์ด้วยนะคะ',
+    social:     `${cn} มีสิทธิ์ประกันสังคมหรือบัตรทองไหมคะ`,
+    wait:       `รอสักครู่นะคะ ${cn} ทางคลินิกกำลังตรวจสอบข้อมูลให้ค่ะ`,
+    inscard:    'กรุณาเสียบบัตรประกันสังคมที่เครื่องก่อนนะคะ ขอบคุณค่ะ',
+    ding:       'กรุณาดิงบัตรออกจากเครื่องได้เลยนะคะ ขอบคุณค่ะ',
+    medcert:    `${cn} ต้องการใบรับรองแพทย์ไหมคะ ถ้าต้องการแจ้งเจ้าหน้าที่ได้เลยนะคะ`,
+    rcptbiz:    `${cn} ต้องการใบเสร็จสำหรับเบิกค่ารักษาพยาบาลกับบริษัทไหมคะ`,
+    nocharge0:  `${cn} วันนี้ไม่มีค่าบริการนะคะ ขอบคุณที่ใช้บริการค่ะ`,
+    walkin:     `เรียนผู้รับบริการ ขณะนี้เวลา ${walkTime} น. ทางคลินิกยังรับ Walk in อยู่นะคะ กรุณาแจ้งชื่อที่เคาน์เตอร์ได้เลยค่ะ`,
+    // ── Section 2 ──
+    appt1w:  `${cn} ลงนัดไว้อีก 1 สัปดาห์แล้วนะคะ สามารถรับใบนัดได้ที่เครื่องปริ้นท์ค่ะ`,
+    appt2w:  `${cn} ลงนัดไว้อีก 2 สัปดาห์แล้วนะคะ สามารถรับใบนัดได้ที่เครื่องปริ้นท์ค่ะ`,
+    appt3w:  `${cn} ลงนัดไว้อีก 3 สัปดาห์แล้วนะคะ สามารถรับใบนัดได้ที่เครื่องปริ้นท์ค่ะ`,
+    appt4w:  `${cn} ลงนัดไว้อีก 4 สัปดาห์แล้วนะคะ สามารถรับใบนัดได้ที่เครื่องปริ้นท์ค่ะ`,
+    appt1m:  `${cn} ลงนัดไว้อีก 1 เดือนแล้วนะคะ สามารถรับใบนัดได้ที่เครื่องปริ้นท์ค่ะ`,
+    appt1h:  `${cn} ลงนัดไว้อีก 1 เดือนครึ่งแล้วนะคะ สามารถรับใบนัดได้ที่เครื่องปริ้นท์ค่ะ`,
+    appt2m:  `${cn} ลงนัดไว้อีก 2 เดือนแล้วนะคะ สามารถรับใบนัดได้ที่เครื่องปริ้นท์ค่ะ`,
+    appt3m:  `${cn} ลงนัดไว้อีก 3 เดือนแล้วนะคะ สามารถรับใบนัดได้ที่เครื่องปริ้นท์ค่ะ`,
+    wait2:   'ได้ค่ะ รอสักลักษณ์ครู่นะคะ',
+    booked:  `เรียบร้อยค่ะ ลงนัดไว้เรียบร้อยแล้วนะคะ ${cn} สามารถหยิบใบนัดได้ที่เครื่องปริ้นท์ด้านข้างเคาน์เตอร์ได้เลยนะคะ`,
+    callpt:  `เรียน ${cn} ขณะนี้ถึงคิวของท่านแล้วค่ะ กรุณาเข้าห้องตรวจได้เลยค่ะ`,
+    pay:     `${cn} กรุณาเดินมาชำระค่ารักษาพยาบาลที่เคาน์เตอร์ได้เลยค่ะ ขอบคุณค่ะ`,
+    exam1:   `เรียน ${cn} กรุณาเข้าห้องตรวจได้เลยค่ะ`,
+    exam1r:  `เรียน ${cn} กรุณาเข้าห้องตรวจที่หนึ่งได้เลยค่ะ`,
+    exam2r:  `เรียน ${cn} กรุณาเข้าห้องตรวจที่สองได้เลยค่ะ`,
+    bye:     `${cn} ขอบคุณที่ใช้บริการคลินิกทันตกรรมบางปะอินนะคะ ดูแลสุขภาพด้วยนะคะ แล้วพบกันใหม่นะคะ`,
+    freewappt: `${cn} วันนี้ไม่มีค่าใช้จ่ายนะคะ และลงนัดไว้อีก ${freeDur} แล้วนะคะ สามารถรับใบนัดได้ที่เครื่องปริ้นท์ค่ะ`,
+    wai:     'ขอบคุณมากค่ะ สวัสดีค่ะ',
+  };
+  const txt = msgs[key];
+  if(txt) ttsSpeak(txt);
+}
+
+
+document.getElementById('ttsPanelModal').addEventListener('click',function(e){
+  if(e.target===this) closeTtsPanel();
+});
 
 </script>
 
@@ -2219,6 +2722,96 @@ td{padding:6px 8px;border-bottom:1px solid #eee}.sum td{font-weight:700;backgrou
     <button class="doc-btn" style="background:#e3f2fd;color:#1565c0;font-weight:700" onclick="window.speechSynthesis.cancel()">⏹ หยุด</button>
     <button class="doc-btn doc-btn-cancel" onclick="document.getElementById('ttsModal').classList.remove('show')">ปิด</button>
   </div>
+</div></div>
+
+
+<!-- ══ TTS PANEL MODAL ══ -->
+<div class="tts-panel-overlay" id="ttsPanelModal">
+<div class="tts-panel">
+  <h2>💬 อ่านออกเสียง &mdash; <span id="ttsPanelPt" style="color:#2bb5a0"></span>
+    <button onclick="closeTtsPanel()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;line-height:1">✕</button>
+  </h2>
+
+  <!-- ── ส่วนที่ 1: ประโยคพร้อมอ่าน ── -->
+  <div class="tts-section">
+    <div class="tts-section-hdr">📢 ประโยคพร้อมอ่าน (1.5×)</div>
+    <div class="tts-grid" style="margin-bottom:6px">
+      <button class="tp-btn tp-teal"   onclick="tp('greeting')">👋 Greeting</button>
+      <button class="tp-btn tp-blue"   onclick="tp('card')">📋 แจ้งเสียบบัตร</button>
+      <button class="tp-btn tp-blue"   onclick="tp('ask')">🧑 สอบถามคนไข้</button>
+      <button class="tp-btn tp-red"    onclick="tp('bp')">❤️ เครื่องวัดความดัน</button>
+      <button class="tp-btn tp-green"  onclick="tp('social')">🏥 Social welfare?</button>
+      <button class="tp-btn tp-grey"   onclick="tp('wait')">⏳ Wait Assistant</button>
+      <button class="tp-btn tp-orange" onclick="tp('inscard')">💳 เสียบบัตร ปกส.</button>
+      <button class="tp-btn tp-orange" onclick="tp('ding')">🔔 ดิงบัตรออก</button>
+      <button class="tp-btn tp-purple" onclick="tp('medcert')">📄 ใบรับรองแพทย์</button>
+      <button class="tp-btn tp-purple" onclick="tp('rcptbiz')">🧾 ใบเสร็จเบิกบริษัท</button>
+      <button class="tp-btn tp-teal"   onclick="tp('nocharge0')">🆓 ไม่มีค่าบริการ</button>
+      <button class="tp-btn tp-grey"   onclick="openTtsCustom()">✏️ พิมพ์เอง</button>
+    </div>
+    <div class="tts-walkin-row">
+      <select id="tpWalkTime" style="width:90px">
+        <option>08:00</option><option>08:30</option><option>09:00</option>
+        <option>09:30</option><option>10:00</option><option>10:30</option>
+        <option>11:00</option><option>11:30</option><option>12:00</option>
+        <option>12:30</option><option>13:00</option><option>13:30</option>
+        <option>14:00</option><option>14:30</option><option>15:00</option>
+      </select>
+      <button onclick="tp('walkin')" style="background:#e8eaf6;color:#283593;padding:7px 10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Sarabun,Arial,sans-serif;flex:1">
+        🚶 คนใช้ Walk in: ถามคิวว่างที่โมง
+      </button>
+    </div>
+  </div>
+
+  <!-- ── ส่วนที่ 2: คำนวณวันนัด + เช็คคิวว่าง ── -->
+  <div class="tts-section">
+    <div class="tts-section-hdr">📅 คำนวณวันนัด + เช็คคิวว่าง (1.5×)</div>
+    <div class="tts-grid2" style="margin-bottom:6px">
+      <button class="tp-btn tp-blue"  onclick="tp('appt1w')">1 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt2w')">2 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt3w')">3 week</button>
+      <button class="tp-btn tp-blue"  onclick="tp('appt4w')">4 week</button>
+      <button class="tp-btn tp-green" onclick="tp('appt1m')">1 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt1h')">1.5 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt2m')">2 month</button>
+      <button class="tp-btn tp-green" onclick="tp('appt3m')">3 month</button>
+    </div>
+    <div class="tts-grid" style="margin-bottom:6px">
+      <button class="tp-btn tp-yellow" onclick="openApptFromTts()">📅 คนใช้เลือกวันเวลา</button>
+      <button class="tp-btn tp-grey"   onclick="tp('wait2')">⏳ ได้ค่ะ รอลักครู่นะคะ</button>
+      <button class="tp-btn tp-teal"   onclick="tp('booked')">✅ ลงนัดเรียบร้อย</button>
+      <button class="tp-btn tp-blue"   onclick="tp('callpt')">🔊 เรียกคนไข้</button>
+      <button class="tp-btn tp-orange" onclick="tp('pay')">💰 คิดเงิน</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam1')">🔊 เข้าห้องตรวจ</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam1r')">🔊 ห้องตรวจ 1</button>
+      <button class="tp-btn tp-red"    onclick="tp('exam2r')">🔊 ห้องตรวจ 2</button>
+      <button class="tp-btn tp-green"  onclick="tp('bye')">👋 กล่าวลา</button>
+    </div>
+    <div class="tts-walkin-row">
+      <select id="tpFreeDur" style="width:110px">
+        <option value="1 สัปดาห์">1 week</option>
+        <option value="2 สัปดาห์">2 week</option>
+        <option value="1 เดือน">1 month</option>
+        <option value="2 เดือน">2 month</option>
+        <option value="3 เดือน">3 month</option>
+      </select>
+      <button onclick="tp('freewappt')" style="background:#e8f5e9;color:#1b5e20;padding:7px 10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Sarabun,Arial,sans-serif;flex:1">
+        🆓 ไม่มีค่าใช้จ่าย แต่มีนัด
+      </button>
+    </div>
+    <button class="tp-btn" onclick="tp('wai')" style="background:#fff8e1;color:#f57f17;width:100%;margin-top:8px;padding:10px;font-size:18px">🙏</button>
+  </div>
+
+  <!-- ── ส่วนที่ 3: พิมพ์เอง ── -->
+  <div class="tts-section" id="ttsCustomSection" style="display:none">
+    <div class="tts-section-hdr">✏️ พิมพ์ข้อความเอง</div>
+    <textarea id="ttsCustomText" rows="3" style="width:100%;padding:9px;border:1.5px solid #ddd;border-radius:8px;font-family:Sarabun,Arial,sans-serif;font-size:15px;box-sizing:border-box;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button onclick="ttsSpeak(document.getElementById('ttsCustomText').value)" style="flex:2;padding:10px;background:#2bb5a0;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;font-family:Sarabun,Arial,sans-serif">🔊 อ่านออกเสียง</button>
+      <button onclick="window.speechSynthesis.cancel()" style="flex:1;padding:10px;background:#f5f5f5;color:#555;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:Sarabun,Arial,sans-serif">⏹ หยุด</button>
+    </div>
+  </div>
+
 </div></div>
 
 </body>
