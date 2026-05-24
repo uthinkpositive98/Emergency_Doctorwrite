@@ -1908,14 +1908,18 @@ function mkCard(q){
   const d=document.createElement('div');
   d.className='pt-card'+(done?' card-done':'');
   d.id='card_'+q.uid;
+  d.style.cursor='pointer';
+  d.title='คลิกเพื่อดูเวชระเบียน';
+  d.onclick=(e)=>{
+    // ถ้าคลิกบน button / input / select ให้ element นั้นทำงานตามปกติ
+    if(e.target.closest('button,input,select,textarea')) return;
+    qViewRecord(q.pid,q.name,q.ph||'',e);
+  };
   d.ondblclick=()=>{ if(q.pid&&PATIENTS.find(x=>x.id===q.pid)){selectPt(q.pid);} switchTab('search'); const wtb=document.getElementById('writeToggleBtn');if(wtb)wtb.style.display='flex'; setTimeout(()=>document.getElementById('pane-search')?.scrollIntoView({behavior:'smooth'}),80); };
   d.innerHTML=`
-<div class="pch" onclick="qViewRecord(${q.pid},'${q.name.replace(/'/g,"\\'")}','${(q.ph||'').replace(/'/g,"\\'")}',event)"
-  style="cursor:pointer" title="คลิกเพื่อดูเวชระเบียน">
+<div class="pch">
   <div>
-    <div class="pcn" style="text-decoration:underline dotted 1.5px;text-underline-offset:3px">${q.name}
-      <span style="font-size:10px;color:#2bb5a0;margin-left:6px;font-weight:400">📋 เวชระเบียน</span>
-    </div>
+    <div class="pcn">${q.name}</div>
     <div class="pcm">📞 ${q.ph||'-'}${q.rg?' &nbsp;|&nbsp; '+q.rg:''}</div>
   </div>
   <div class="pcq">#${q.no}</div>
