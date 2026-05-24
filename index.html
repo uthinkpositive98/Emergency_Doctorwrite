@@ -1915,7 +1915,7 @@ function mkCard(q){
     if(e.target.closest('button,input,select,textarea')) return;
     qViewRecord(q.pid,q.name,q.ph||'',e);
   };
-  d.ondblclick=()=>{ if(q.pid&&PATIENTS.find(x=>x.id===q.pid)){selectPt(q.pid);} switchTab('search'); const wtb=document.getElementById('writeToggleBtn');if(wtb)wtb.style.display='flex'; setTimeout(()=>document.getElementById('pane-search')?.scrollIntoView({behavior:'smooth'}),80); };
+  d.ondblclick=()=>{ if(q.pid&&PATIENTS.find(x=>x.id===q.pid)){selPt(q.pid);} switchTab('search'); const wtb=document.getElementById('writeToggleBtn');if(wtb)wtb.style.display='flex'; setTimeout(()=>document.getElementById('pane-search')?.scrollIntoView({behavior:'smooth'}),80); };
   d.innerHTML=`
 <div class="pch">
   <div>
@@ -1953,7 +1953,7 @@ function qSetPtDo(pid,name,ph,fn){
   fn();
 }
 function qGoWrite(pid){
-  if(pid){ const p=PATIENTS.find(x=>x.id===pid); if(p) selectPt(p.id); }
+  if(pid){ const p=PATIENTS.find(x=>x.id===pid); if(p) selPt(p.id); }
   switchTab('draw');
 }
 
@@ -2279,17 +2279,24 @@ document.getElementById('ttsPanelModal').addEventListener('click',function(e){
 
 
 function qViewRecord(pid, name, ph, event){
-  // ป้องกัน propagation ไปที่ ondblclick
   if(event) event.stopPropagation();
-  if(pid && PATIENTS.find(x=>x.id===pid)){
-    selectPt(pid);
+  // หา patient จาก pid ก่อน ถ้าไม่เจอ fallback ค้นหาจากชื่อ
+  let found = pid ? PATIENTS.find(x=>x.id===pid) : null;
+  if(!found && name){
+    found = PATIENTS.find(x=>x.name===name)
+         || PATIENTS.find(x=>x.name.includes((name.split(' ')[1]||name.split(' ')[0])||''));
+  }
+  if(found){
+    selPt(found.id);  // ชื่อจริงของฟังก์ชัน
   } else {
-    curPt = {id:0,name,phone:ph,rights:'',history:'',imgs:[]};
+    // fallback: แสดงชื่อเบอร์ที่รู้จาก queue
+    curPt={id:0,name,phone:ph,rights:'',history:'',imgs:[]};
+    document.getElementById('pname').textContent=name;
+    document.getElementById('prof')?.classList.add('show');
   }
   switchTab('search');
   const wtb=document.getElementById('writeToggleBtn');
   if(wtb) wtb.style.display='flex';
-  // scroll ขึ้นบนสุดของหน้า search
   setTimeout(()=>document.getElementById('pane-search')?.scrollTo({top:0,behavior:'smooth'}),80);
 }
 
