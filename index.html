@@ -438,6 +438,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--dark);min-height:1
       <div class="q-actions">
         <button class="qa-btn qa-add" onclick="openAddQueue()">➕ เพิ่มคนไข้เข้าคิว</button>
         <button class="qa-btn qa-ledger" onclick="openLedger()">💰 ลงบัญชี</button>
+        <button class="qa-btn" id="btnMultiselect"
+          style="background:#95a5a6;color:#fff;font-size:16px"
+          onclick="toggleMultiselect()"
+          title="เลือกหลายคนแล้วกด Enter เพื่อให้ AI วิเคราะห์เวชระเบียน">👨‍👨‍👦‍👦</button>
       </div>
     </div>
     <div class="queue-stats">
@@ -1911,6 +1915,8 @@ function mkCard(q){
   d.style.cursor='pointer';
   d.title='คลิกเพื่อดูเวชระเบียน';
   d.onclick=(e)=>{
+    // ถ้าอยู่ใน multi-select mode: toggle การเลือกการ์ดนี้
+    if(_msMode){ toggleMsCard(q.uid); return; }
     // ถ้าคลิกบน button / input / select ให้ element นั้นทำงานตามปกติ
     if(e.target.closest('button,input,select,textarea')) return;
     qViewRecord(q.pid,q.name,q.ph||'',e);
@@ -2302,6 +2308,212 @@ function qViewRecord(pid, name, ph, event){
   setTimeout(()=>document.getElementById('pane-search')?.scrollTo({top:0,behavior:'smooth'}),80);
 }
 
+// ══════════════════════════════════════════════════════════
+//  👨‍👨‍👦‍👦 MULTI-SELECT MODE + AI ANALYSIS (Gemini)
+//  แปลงจาก patch_multiselect_for_DentalAccounting.py
+// ══════════════════════════════════════════════════════════
+
+let _msMode = false;
+let _selectedUids = new Set();   // uid ของ queue entry ที่เลือก
+
+// ── Toggle Multi-Select Mode ──────────────────────────────
+function toggleMultiselect() {
+  _msMode = !_msMode;
+  _selectedUids.clear();
+  const btn = document.getElementById('btnMultiselect');
+  const banner = document.getElementById('msBanner');
+  if (_msMode) {
+    btn.style.background = '#e74c3c';
+    btn.textContent = '👨‍👨‍👦‍👦 ✓';
+    banner.style.display = 'flex';
+    document.addEventListener('keydown', _msKeyHandler);
+    toast('👨‍👨‍👦‍👦 โหมดเลือกหลายคน — คลิกการ์ดเพื่อเลือก แล้วกด Enter', '');
+  } else {
+    exitMultiselect();
+  }
+}
+
+function exitMultiselect() {
+  _msMode = false;
+  _selectedUids.clear();
+  const btn = document.getElementById('btnMultiselect');
+  btn.style.background = '#95a5a6';
+  btn.textContent = '👨‍👨‍👦‍👦';
+  document.getElementById('msBanner').style.display = 'none';
+  document.removeEventListener('keydown', _msKeyHandler);
+  // ล้าง highlight ทุกการ์ด
+  document.querySelectorAll('.pt-card').forEach(c => {
+    c.style.outline = '';
+    c.style.background = '';
+  });
+}
+
+function _msKeyHandler(e) {
+  if (e.key === 'Enter') analyzeSelected();
+  if (e.key === 'Escape') exitMultiselect();
+}
+
+// ── Toggle Row Selection (เรียกจาก mkCard) ───────────────
+// คืนค่า true ถ้าอยู่ใน ms mode (ป้องกัน event ลงไปถึง onclick ปกติ)
+function toggleMsCard(uid) {
+  if (!_msMode) return false;
+  if (_selectedUids.has(uid)) {
+    _selectedUids.delete(uid);
+  } else {
+    _selectedUids.add(uid);
+  }
+  const card = document.getElementById('card_' + uid);
+  if (card) {
+    if (_selectedUids.has(uid)) {
+      card.style.outline = '3px solid #e74c3c';
+      card.style.background = '#fde8e8';
+    } else {
+      card.style.outline = '';
+      card.style.background = '';
+    }
+  }
+  document.getElementById('msCount').textContent = _selectedUids.size + ' คน';
+  return true;
+}
+
+// ── หา Drive File ID ของ draw ล่าสุดของคนไข้ ─────────────
+function getLatestDrawFileId(pid) {
+  const prefix = 'draw_' + pid + '_';
+  const candidates = Object.keys(driveFileMap)
+    .filter(n => n.startsWith(prefix) && (n.endsWith('.png') || n.endsWith('.jpg')))
+    .sort()
+    .reverse();
+  if (!candidates.length) return null;
+  return { name: candidates[0], id: driveFileMap[candidates[0]] };
+}
+
+// ── ดาวน์โหลดรูปจาก Drive แล้วแปลงเป็น base64 ───────────
+async function driveFileToBase64(fileId, token) {
+  const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+  const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  if (!resp.ok) throw new Error('ดาวน์โหลดรูปไม่ได้: ' + resp.status);
+  const blob = await resp.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// ── วิเคราะห์ด้วย Gemini ─────────────────────────────────
+async function analyzeSelected() {
+  if (!_selectedUids.size) {
+    toast('⚠️ ยังไม่ได้เลือกคนไข้เลยค่ะ', 'err');
+    return;
+  }
+
+  // รวบรวมข้อมูลจาก qData
+  const targets = [];
+  for (const uid of _selectedUids) {
+    const q = qData.find(x => x.uid === uid);
+    if (!q) continue;
+    // หา patient_id จาก PATIENTS array (เทียบเท่า sqlite query ใน Python)
+    const pid = q.pid || ((PATIENTS.find(p => p.name === q.name) || {}).id) || null;
+    targets.push({ uid, name: q.name, pid });
+  }
+
+  if (!targets.length) {
+    toast('⚠️ ไม่พบข้อมูลคนไข้ที่เลือก', 'err');
+    return;
+  }
+
+  showOv('🤖 กำลังเตรียมข้อมูล...');
+
+  const GEMINI_URL =
+    'https://generativelanguage.googleapis.com/v1beta/models/' +
+    'gemini-2.5-flash:generateContent?key=AIzaSyBm553DtWmLGrVeR1zMM12sT7ucGeX2Ebs';
+
+  const results = [];
+
+  try {
+    const tok = await getToken();
+    // สร้าง Drive index ถ้ายังไม่มี
+    if (!Object.keys(driveFileMap).length) {
+      showOv('🤖 กำลังสแกน Drive index...');
+      await buildDriveIndex(tok);
+    }
+
+    for (let i = 0; i < targets.length; i++) {
+      const { name, pid } = targets[i];
+      showOv(`🤖 กำลังวิเคราะห์ ${name}... (${i + 1}/${targets.length})`);
+
+      if (!pid) {
+        results.push(`[${name}] ไม่พบรหัสคนไข้ในระบบ`);
+        continue;
+      }
+
+      const fileInfo = getLatestDrawFileId(pid);
+      if (!fileInfo) {
+        results.push(`[${name}] ไม่พบรูปลายมือเวชระเบียนใน Drive`);
+        continue;
+      }
+
+      try {
+        const imgB64 = await driveFileToBase64(fileInfo.id, tok);
+        const mimeType = fileInfo.name.endsWith('.jpg') ? 'image/jpeg' : 'image/png';
+
+        const payload = {
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: mimeType, data: imgB64 } },
+              {
+                text:
+                  `ชื่อคนไข้: ${name}\n` +
+                  'นี่คือรูปบันทึกเวชระเบียนทันตกรรมที่เขียนด้วยลายมือ ' +
+                  'กรุณาอ่านและสรุปว่าในวันนี้คนไข้ได้รับการรักษาอะไรบ้าง ' +
+                  'ค่ารักษาเท่าไร หักประกันสังคมไหม เหลือชำระเท่าไร ' +
+                  'สรุปเป็นประโยคสั้นๆ ภาษาไทย 1-2 บรรทัด ' +
+                  'ตัวอย่างเช่น: คุณ... ขูดหินปูนทั้งปาก 3000 บาท หรือ ' +
+                  'คุณ... อุดฟัน หักประกันสังคม 900 บาท เหลือชำระ 2000 บาท'
+              }
+            ]
+          }]
+        };
+
+        const resp = await fetch(GEMINI_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        let summary = '';
+        try {
+          summary = data.candidates[0].content.parts[0].text.trim();
+        } catch {
+          const errMsg = ((data.error || {}).message || JSON.stringify(data)).slice(0, 120);
+          summary = `[${name}] API error ${resp.status}: ${errMsg}`;
+        }
+        results.push(summary || `[${name}] ไม่ได้รับผลลัพธ์จาก AI`);
+
+      } catch (e) {
+        results.push(`[${name}] วิเคราะห์ไม่สำเร็จ: ${e.message}`);
+      }
+    }
+  } catch (e) {
+    hideOv();
+    results.push('เกิดข้อผิดพลาด: ' + e.message);
+  }
+
+  hideOv();
+  exitMultiselect();
+
+  document.getElementById('aiResultText').value = results.join('\n');
+  document.getElementById('aiResultModal').classList.add('show');
+}
+
+function copyAiResult() {
+  const txt = document.getElementById('aiResultText');
+  txt.select();
+  document.execCommand('copy');
+  toast('📋 คัดลอกข้อความแล้วค่ะ', 'ok');
+}
+
 </script>
 
 <!-- ══ RECEIPT MODAL ══ -->
@@ -2571,6 +2783,32 @@ function qViewRecord(pid, name, ph, event){
     </div>
   </div>
 
+</div></div>
+
+<!-- ══ MULTISELECT BANNER ══ -->
+<div id="msBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9900;
+  background:#e74c3c;color:#fff;padding:12px 16px;font-family:Sarabun,Arial,sans-serif;
+  font-size:14px;font-weight:700;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <span>👨‍👨‍👦‍👦 โหมดเลือกหลายคน — คลิกการ์ดคนไข้เพื่อเลือก</span>
+  <span id="msCount" style="background:rgba(255,255,255,.25);border-radius:20px;padding:2px 12px">0 คน</span>
+  <button onclick="analyzeSelected()" style="margin-left:auto;background:#fff;color:#e74c3c;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-family:Sarabun,Arial,sans-serif;font-size:14px">🤖 วิเคราะห์ AI (Enter)</button>
+  <button onclick="exitMultiselect()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer;font-family:Sarabun,Arial,sans-serif">✕ ยกเลิก (Esc)</button>
+</div>
+
+<!-- ══ AI RESULT MODAL ══ -->
+<div class="doc-modal-overlay" id="aiResultModal">
+<div class="doc-modal" style="max-width:640px">
+  <button class="doc-modal-close" onclick="document.getElementById('aiResultModal').classList.remove('show')">✕</button>
+  <h2>📋 สรุปการรักษาวันนี้</h2>
+  <p style="font-size:12px;color:#888;margin:0 0 8px">คัดลอกข้อความได้เลยค่ะ</p>
+  <textarea id="aiResultText" rows="12"
+    style="width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-family:Sarabun,Arial,sans-serif;
+    font-size:14px;box-sizing:border-box;resize:vertical;background:#fffde7;color:#1a1a1a"
+    readonly></textarea>
+  <div class="doc-btn-row">
+    <button class="doc-btn doc-btn-print" onclick="copyAiResult()">📋 คัดลอกทั้งหมด</button>
+    <button class="doc-btn doc-btn-cancel" onclick="document.getElementById('aiResultModal').classList.remove('show')">ปิด</button>
+  </div>
 </div></div>
 
 </body>
