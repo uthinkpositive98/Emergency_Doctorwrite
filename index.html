@@ -1910,12 +1910,16 @@ function mkCard(q){
   d.style.cursor='pointer';
   d.title='คลิกเพื่อดูเวชระเบียน';
   d.onclick=(e)=>{
-    // ถ้าอยู่ใน multi-select mode: toggle การเลือกการ์ดนี้
     if(_msMode){ toggleMsCard(q.uid); return; }
-    // ถ้าคลิกบน button / input / select ให้ element นั้นทำงานตามปกติ
     if(e.target.closest('button,input,select,textarea')) return;
-    // คลิกครั้งเดียวไปเวชระเบียนเลย
-    if(q.pid&&PATIENTS.find(x=>x.id===q.pid)){ selPt(q.pid); } else { qViewRecord(q.pid,q.name,q.ph||'',e); return; }
+    // ใช้ == เพราะ pid อาจเป็น string หรือ number
+    const found = q.pid ? PATIENTS.find(x=>x.id==q.pid) : null;
+    if(found){ selPt(found.id); }
+    else {
+      curPt={id:0,name:q.name,phone:q.ph||'',rights:'',history:'',imgs:[]};
+      const pnEl=document.getElementById('pname'); if(pnEl) pnEl.textContent=q.name;
+      document.getElementById('prof')?.classList.add('show');
+    }
     switchTab('search');
     const wtb=document.getElementById('writeToggleBtn');
     if(wtb) wtb.style.display='flex';
@@ -2674,7 +2678,7 @@ async function analyzeSelected() {
 
   showOv('🤖 กำลังเตรียมข้อมูล...');
 
-  const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyCNOKAKTzdbxSUfpz2pXMJjeOiv-YmNMPY';
+  const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=YOUR_GEMINI_KEY';
   const results = [];
 
   try {
