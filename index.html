@@ -366,7 +366,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--dark);min-height:1
 .tt-welcome{background:#fce4ec;color:#880e4f}
 /* Dblclick hint on card */
 .pt-card{cursor:pointer}
-.pt-card::after{content:'ดับเบิ้ลคลิกเพื่อดูเวชระเบียน';position:absolute;bottom:0;right:0;font-size:9px;color:#bbb;padding:2px 6px;pointer-events:none;opacity:0;transition:.2s}
+.pt-card::after{content:'คลิกเพื่อดูเวชระเบียน';position:absolute;bottom:0;right:0;font-size:9px;color:#bbb;padding:2px 6px;pointer-events:none;opacity:0;transition:.2s}
 .pt-card:hover::after{opacity:1}
 
 
@@ -555,6 +555,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--dark);min-height:1
         <div class="cdot" style="background:#f39c12" data-c="#f39c12" onclick="setClr(this)"></div>
         <input class="sz" type="range" min="1" max="22" value="3" oninput="setSz(this.value)">
         <span class="szlbl" id="szlbl">3px</span>
+        <button id="btnFull" onclick="toggleCvFullscreen()" title="Fullscreen กระดาษเขียน (F)" style="padding:5px 10px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;background:#e8eaf6;color:#283593;margin-left:4px">F ⛶</button>
       </div>
       <div class="cv-wrap" id="cvWrap">
         <canvas id="drawCv"></canvas>
@@ -873,6 +874,37 @@ function dr(e){if(!drawing)return;const p=gpos(e);
   ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);lx=p.x;ly=p.y;
 }
 function ed(){drawing=false;ctx.beginPath();}
+function toggleCvFullscreen(){
+  const wrap=document.getElementById('cvWrap');
+  const btn=document.getElementById('btnFull');
+  if(!wrap._isFs){
+    // เข้า fullscreen
+    wrap._origStyle=wrap.getAttribute('style')||'';
+    wrap.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:#fff;border-radius:0;';
+    const cv=document.getElementById('drawCv');
+    cv._origW=cv.width; cv._origH=cv.height;
+    cv.width=window.innerWidth; cv.height=window.innerHeight;
+    btn.textContent='✕ ออก Full'; btn.style.background='#ffcdd2'; btn.style.color='#c62828';
+    wrap._isFs=true;
+    // กด Esc ออกได้
+    wrap._escHandler=(e)=>{ if(e.key==='Escape') exitCvFullscreen(); };
+    document.addEventListener('keydown',wrap._escHandler);
+  } else {
+    exitCvFullscreen();
+  }
+}
+function exitCvFullscreen(){
+  const wrap=document.getElementById('cvWrap');
+  const btn=document.getElementById('btnFull');
+  if(!wrap||!wrap._isFs) return;
+  wrap.setAttribute('style',wrap._origStyle||'');
+  const cv=document.getElementById('drawCv');
+  if(cv._origW) cv.width=cv._origW;
+  if(cv._origH) cv.height=cv._origH;
+  btn.textContent='F ⛶'; btn.style.background='#e8eaf6'; btn.style.color='#283593';
+  wrap._isFs=false;
+  if(wrap._escHandler) document.removeEventListener('keydown',wrap._escHandler);
+}
 function setTool(t){curTool=t;document.getElementById("bpen").classList.toggle("on",t==="pen");document.getElementById("bera").classList.toggle("on",t==="eraser");}
 function setClr(el){curColor=el.dataset.c;setTool("pen");document.querySelectorAll(".cdot").forEach(d=>d.classList.remove("on"));el.classList.add("on");}
 function setSz(v){curSz=parseInt(v);document.getElementById("szlbl").textContent=v+"px";}
@@ -887,6 +919,7 @@ function mkFilename(id){
 
 // ══════════════════ UPLOAD ══════════════════
 async function saveUp(){
+  exitCvFullscreen(); // ออกจาก fullscreen ก่อนบันทึก
   if(!curPt){toast("⚠️ เลือกคนไข้ก่อน","err");switchTab("search");return;}
   if(!navigator.onLine){toast("📴 ไม่มีอินเทอร์เน็ต","err");return;}
   const dpr=window.devicePixelRatio||1;
@@ -1881,9 +1914,13 @@ function mkCard(q){
     if(_msMode){ toggleMsCard(q.uid); return; }
     // ถ้าคลิกบน button / input / select ให้ element นั้นทำงานตามปกติ
     if(e.target.closest('button,input,select,textarea')) return;
-    qViewRecord(q.pid,q.name,q.ph||'',e);
+    // คลิกครั้งเดียวไปเวชระเบียนเลย
+    if(q.pid&&PATIENTS.find(x=>x.id===q.pid)){ selPt(q.pid); } else { qViewRecord(q.pid,q.name,q.ph||'',e); return; }
+    switchTab('search');
+    const wtb=document.getElementById('writeToggleBtn');
+    if(wtb) wtb.style.display='flex';
+    setTimeout(()=>document.getElementById('pane-search')?.scrollIntoView({behavior:'smooth'}),80);
   };
-  d.ondblclick=()=>{ if(q.pid&&PATIENTS.find(x=>x.id===q.pid)){selPt(q.pid);} switchTab('search'); const wtb=document.getElementById('writeToggleBtn');if(wtb)wtb.style.display='flex'; setTimeout(()=>document.getElementById('pane-search')?.scrollIntoView({behavior:'smooth'}),80); };
   d.innerHTML=`
 <div class="pch">
   <div>
@@ -2624,110 +2661,58 @@ async function driveFileToBase64(fileId, token) {
 
 // ── วิเคราะห์ด้วย Gemini ─────────────────────────────────
 async function analyzeSelected() {
-  if (!_selectedUids.size) {
-    toast('⚠️ ยังไม่ได้เลือกคนไข้เลยค่ะ', 'err');
-    return;
-  }
+  if (!_selectedUids.size) { toast('⚠️ ยังไม่ได้เลือกคนไข้เลยค่ะ', 'err'); return; }
 
-  // รวบรวมข้อมูลจาก qData
   const targets = [];
   for (const uid of _selectedUids) {
     const q = qData.find(x => x.uid === uid);
     if (!q) continue;
-    // หา patient_id จาก PATIENTS array (เทียบเท่า sqlite query ใน Python)
     const pid = q.pid || ((PATIENTS.find(p => p.name === q.name) || {}).id) || null;
     targets.push({ uid, name: q.name, pid });
   }
-
-  if (!targets.length) {
-    toast('⚠️ ไม่พบข้อมูลคนไข้ที่เลือก', 'err');
-    return;
-  }
+  if (!targets.length) { toast('⚠️ ไม่พบข้อมูลคนไข้ที่เลือก', 'err'); return; }
 
   showOv('🤖 กำลังเตรียมข้อมูล...');
 
-  const GEMINI_URL =
-    'https://generativelanguage.googleapis.com/v1beta/models/' +
-    'gemini-2.5-flash:generateContent?key=AIzaSyBm553DtWmLGrVeR1zMM12sT7ucGeX2Ebs';
-
+  const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyCNOKAKTzdbxSUfpz2pXMJjeOiv-YmNMPY';
   const results = [];
 
   try {
     const tok = await getToken();
-    // สร้าง Drive index ถ้ายังไม่มี
     if (!Object.keys(driveFileMap).length) {
-      showOv('🤖 กำลังสแกน Drive index...');
-      await buildDriveIndex(tok);
+      showOv('🤖 กำลังสแกน Drive index...'); await buildDriveIndex(tok);
     }
 
     for (let i = 0; i < targets.length; i++) {
       const { name, pid } = targets[i];
-      showOv(`🤖 กำลังวิเคราะห์ ${name}... (${i + 1}/${targets.length})`);
-
-      if (!pid) {
-        results.push(`[${name}] ไม่พบรหัสคนไข้ในระบบ`);
-        continue;
-      }
+      showOv(`🤖 กำลังวิเคราะห์ ${name}... (${i+1}/${targets.length})`);
+      if (!pid) { results.push(`[${name}] ไม่พบรหัสคนไข้ในระบบ`); continue; }
 
       const fileInfo = getLatestDrawFileId(pid);
-      if (!fileInfo) {
-        results.push(`[${name}] ไม่พบรูปลายมือเวชระเบียนใน Drive`);
-        continue;
-      }
+      if (!fileInfo) { results.push(`[${name}] ไม่พบรูปลายมือเวชระเบียนใน Drive`); continue; }
 
       try {
         const imgB64 = await driveFileToBase64(fileInfo.id, tok);
         const mimeType = fileInfo.name.endsWith('.jpg') ? 'image/jpeg' : 'image/png';
+        const payload = { contents: [{ parts: [
+          { inline_data: { mime_type: mimeType, data: imgB64 } },
+          { text: `ชื่อคนไข้: ${name}\nนี่คือรูปบันทึกเวชระเบียนทันตกรรมที่เขียนด้วยลายมือ กรุณาอ่านและสรุปว่าในวันนี้คนไข้ได้รับการรักษาอะไรบ้าง ค่ารักษาเท่าไร หักประกันสังคมไหม เหลือชำระเท่าไร สรุปเป็นประโยคสั้นๆ ภาษาไทย 1-2 บรรทัด` }
+        ]}]};
 
-        const payload = {
-          contents: [{
-            parts: [
-              { inline_data: { mime_type: mimeType, data: imgB64 } },
-              {
-                text:
-                  `ชื่อคนไข้: ${name}\n` +
-                  'นี่คือรูปบันทึกเวชระเบียนทันตกรรมที่เขียนด้วยลายมือ ' +
-                  'กรุณาอ่านและสรุปว่าในวันนี้คนไข้ได้รับการรักษาอะไรบ้าง ' +
-                  'ค่ารักษาเท่าไร หักประกันสังคมไหม เหลือชำระเท่าไร ' +
-                  'สรุปเป็นประโยคสั้นๆ ภาษาไทย 1-2 บรรทัด ' +
-                  'ตัวอย่างเช่น: คุณ... ขูดหินปูนทั้งปาก 3000 บาท หรือ ' +
-                  'คุณ... อุดฟัน หักประกันสังคม 900 บาท เหลือชำระ 2000 บาท'
-              }
-            ]
-          }]
-        };
-
-        const resp = await fetch(GEMINI_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+        const resp = await fetch(GEMINI_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
         const data = await resp.json();
         let summary = '';
-        try {
-          summary = data.candidates[0].content.parts[0].text.trim();
-        } catch {
-          const errMsg = ((data.error || {}).message || JSON.stringify(data)).slice(0, 120);
-          summary = `[${name}] API error ${resp.status}: ${errMsg}`;
-        }
+        try { summary = data.candidates[0].content.parts[0].text.trim(); }
+        catch { summary = `[${name}] API error ${resp.status}: ${((data.error||{}).message||'').slice(0,120)}`; }
         results.push(summary || `[${name}] ไม่ได้รับผลลัพธ์จาก AI`);
-
-      } catch (e) {
-        results.push(`[${name}] วิเคราะห์ไม่สำเร็จ: ${e.message}`);
-      }
+      } catch(e) { results.push(`[${name}] วิเคราะห์ไม่สำเร็จ: ${e.message}`); }
     }
-  } catch (e) {
-    hideOv();
-    results.push('เกิดข้อผิดพลาด: ' + e.message);
-  }
+  } catch(e) { hideOv(); results.push('เกิดข้อผิดพลาด: ' + e.message); }
 
-  hideOv();
-  exitMultiselect();
-
+  hideOv(); exitMultiselect();
   document.getElementById('aiResultText').value = results.join('\n');
   document.getElementById('aiResultModal').classList.add('show');
 }
-
 function copyAiResult() {
   const txt = document.getElementById('aiResultText');
   txt.select();
