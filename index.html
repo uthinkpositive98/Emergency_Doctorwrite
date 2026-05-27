@@ -1570,6 +1570,7 @@ function openCertModal(){
   document.getElementById("certSides").value="";
   document.getElementById("certSymptom").value="";
   document.getElementById("certTreatment").value="";
+  document.getElementById("certCertify").value="";
   document.getElementById("certToothRow").style.display="none";
   document.getElementById("certOtherRow").style.display="none";
   document.getElementById("certModal").classList.add("show");
@@ -1586,10 +1587,13 @@ function onCertDiagChange(){
 }
 function printCert(){
   const nm=document.getElementById("certName").value;
+  if(!nm){toast("⚠️ กรุณาระบุชื่อผู้ป่วย","err");return;}
   const dt=document.getElementById("certDate").value;
   const diag=document.getElementById("certDiag").value;
+  if(!diag){toast("⚠️ กรุณาเลือกการวินิจฉัย","err");return;}
   const tooth=document.getElementById("certTooth").value;
   const sides=document.getElementById("certSides").value;
+  const certify=document.getElementById("certCertify").value;
   let sym="",trt="";
   if(diag==="ขูดหินปูน"){ sym="เหงือกบวมอักเสบ มีเลือดออก"; trt="สมควรรักษา จึงได้ทำการขูดหินปูนทั้งปากไป"; }
   else if(diag==="ถอนฟัน"){ sym=`ฟันซี่ ${tooth||"....."} ผุมาก มีอาการปวด หรือ พบว่าปลายรากฟันเป็นหนอง`; trt="สมควรถอน จึงได้ทำการถอนฟันซี่ดังกล่าวไป"; }
@@ -1599,9 +1603,18 @@ function printCert(){
 
   const now=new Date();
   const thM=["","มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
-  // parse certDate (d/m/y or thai text)
-  let dayNum=String(now.getDate()), monNum=String(now.getMonth()+1), yearNum=String(now.getFullYear()+543);
-  try{const parts=dt.replace(/\s/g,' ').split(' '); if(parts.length>=3){dayNum=parts[0];monNum=thM.indexOf(parts[1]);yearNum=parts[2];}}catch{}
+  // parse certDate — รองรับรูปแบบ "27 พฤษภาคม 2568" หรือ "27/05/2568"
+  let dayNum=String(now.getDate()), monTxt=thM[now.getMonth()+1], yearNum=String(now.getFullYear()+543);
+  try{
+    const parts=dt.trim().split(/[\s\/]+/);
+    if(parts.length>=3){
+      dayNum=parts[0];
+      // ถ้าเป็นตัวเลข แปลงเป็นชื่อเดือน
+      const mIdx=parseInt(parts[1]);
+      monTxt=isNaN(mIdx)?parts[1]:thM[mIdx]||parts[1];
+      yearNum=parts[2];
+    }
+  }catch{}
 
   const w=window.open("","_blank","width=800,height=700");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ใบรับรองแพทย์</title>
@@ -1634,20 +1647,20 @@ hr{border:none;border-top:1.5px solid #000;margin:6pt 0 10pt}
   <hr>
   <div class="cert-title">ใบรับรองแพทย์</div>
   <div class="right-align">เขียนที่ คลินิกทันตกรรมบางปะอิน</div>
-  <div class="right-align">วันที่ <span class="dot-line-sm">&nbsp;${dayNum}&nbsp;</span> เดือน <span class="dot-line-sm">&nbsp;${monNum}&nbsp;</span> พ.ศ. 25<span class="dot-line-sm"></span></div>
+  <div class="right-align">วันที่ <span class="dot-line-sm">&nbsp;${dayNum}&nbsp;</span> เดือน <span class="dot-line-sm">&nbsp;${monTxt}&nbsp;</span> พ.ศ. <span class="dot-line-sm">&nbsp;${yearNum}&nbsp;</span></div>
   <div class="body-text">ข้าพเจ้า ทญ.นวรัตน์&nbsp; แผ้วพิษากุล&nbsp; เป็นแพทย์ ซึ่งได้ขึ้นทะเบียนรับใบอนุญาตให้ประกอบโรคศิลป์</div>
   <div class="body-text">แผนปัจจุบันชั้นหนึ่ง&nbsp; เลขที่ ท.4972&nbsp; สาขาทันตกรรม&nbsp; สถานที่อยู่ปัจจุบัน&nbsp; บ้านเลขที่ 1999/95&nbsp; ม.2</div>
   <div class="body-text">ต.คลองจิก อ.บางปะอิน จ.พระนครศรีอยุธยา</div>
-  <div style="font-size:14pt;line-height:2">ได้ทำการตรวจรักษา <span class="dot-line">&nbsp;<b>${nm}</b>&nbsp;</span> เมื่อวันที่ <span class="dot-line-sm"></span> แล้วปรากฏว่า</div>
+  <div style="font-size:14pt;line-height:2">ได้ทำการตรวจรักษา <span class="dot-line">&nbsp;<b>${nm}</b>&nbsp;</span> เมื่อวันที่ <span class="dot-line-sm">&nbsp;${dayNum} ${monTxt} ${yearNum}&nbsp;</span> แล้วปรากฏว่า</div>
   <div style="margin:6pt 0"><span class="dot-line-full">&nbsp;${sym}</span></div>
   <div style="font-size:14pt;line-height:2;margin-top:4pt">เห็นว่า</div>
   <div style="margin:4pt 0"><span class="dot-line-full">&nbsp;${trt}</span></div>
   <div style="margin:4pt 0"><span class="dot-line-full"></span></div>
-  <div style="font-size:14pt;line-height:2;margin-top:4pt">ขอรับรองว่า <span class="dot-line" style="min-width:120mm"></span></div>
+  <div style="font-size:14pt;line-height:2;margin-top:4pt">ขอรับรองว่า <span class="dot-line" style="min-width:120mm">&nbsp;${certify||""}</span></div>
   <div class="sig-area" style="margin-top:18pt;min-height:90px">
     <img src="${ASSET_SIGN}" class="sig-img" alt="sign">
     <div class="sig-name">ลงชื่อ ......../นวรัตน์/แผ้วพิษากุล/......... แพทย์ผู้ตรวจ</div>
-    <div class="sig-name">( ทญ.นักษัตร์จันผิวขาว )</div>
+    <div class="sig-name">( ทญ.นวรัตน์ แผ้วพิษากุล )</div>
     <div class="sig-name" style="font-size:12pt">092-3595963</div>
   </div>
 </div>
@@ -2683,6 +2696,8 @@ function copyAiResult() {
     <label>อาการ (ปรากฏว่า)</label><input id="certSymptom" type="text">
     <label>การรักษา (เห็นว่า)</label><input id="certTreatment" type="text">
   </div>
+  <label>ขอรับรองว่า <span style="font-size:11px;color:#888">(ไม่บังคับ เช่น มีความจำเป็นต้องลาพักรักษาตัว 3 วัน)</span></label>
+  <input id="certCertify" type="text" placeholder="เช่น มีความจำเป็นต้องลาพักรักษาตัว ... วัน">
   <div class="doc-btn-row">
     <button class="doc-btn doc-btn-print" onclick="printCert()">🖨️ พิมพ์ / ดู PDF</button>
     <button class="doc-btn doc-btn-cancel" onclick="document.getElementById('certModal').classList.remove('show')">ปิด</button>
