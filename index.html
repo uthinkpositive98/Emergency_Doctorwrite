@@ -822,7 +822,7 @@ function openLb(src,name,fullUrl){
   document.getElementById("lb").dataset.fullUrl=fullUrl||"";
 }
 function closeLb(){document.getElementById("lb").classList.remove("show");}
-document.getElementById("lb").addEventListener("click",e=>{
+(document.getElementById("lb")||document.createElement('div')).addEventListener("click",e=>{
   if(e.target===document.getElementById("lb")) closeLb();
 });
 
@@ -886,6 +886,13 @@ function toggleCvFullscreen(){
     cv.width=window.innerWidth; cv.height=window.innerHeight;
     btn.textContent='✕ ออก Full'; btn.style.background='#ffcdd2'; btn.style.color='#c62828';
     wrap._isFs=true;
+    // ปุ่มบันทึกลอยกลางล่าง
+    const fsBtn=document.createElement('button');
+    fsBtn.id='fsSaveBtn';
+    fsBtn.textContent='☁️ บันทึกขึ้น Drive';
+    fsBtn.style.cssText='position:fixed;bottom:32px;left:50%;transform:translateX(-50%);z-index:10000;padding:16px 48px;font-size:18px;font-weight:700;background:linear-gradient(135deg,#2bb5a0,#1a8a78);color:#fff;border:none;border-radius:16px;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,0.25);font-family:Sarabun,Arial,sans-serif;';
+    fsBtn.onclick=()=>saveUp();
+    document.body.appendChild(fsBtn);
     // กด Esc ออกได้
     wrap._escHandler=(e)=>{ if(e.key==='Escape') exitCvFullscreen(); };
     document.addEventListener('keydown',wrap._escHandler);
@@ -897,6 +904,7 @@ function exitCvFullscreen(){
   const wrap=document.getElementById('cvWrap');
   const btn=document.getElementById('btnFull');
   if(!wrap||!wrap._isFs) return;
+  const fsBtn=document.getElementById('fsSaveBtn'); if(fsBtn) fsBtn.remove();
   wrap.setAttribute('style',wrap._origStyle||'');
   const cv=document.getElementById('drawCv');
   if(cv._origW) cv.width=cv._origW;
@@ -1901,6 +1909,10 @@ function renderQ(){
 }
 function toggleDone(){ doneOpen=!doneOpen; renderQ(); }
 
+// _msMode ต้องอยู่ก่อน mkCard เพื่อหลีกเลี่ยง TDZ
+let _msMode = false;
+let _selectedUids = new Set();
+
 function mkCard(q){
   const sn = q.name.replace(/^(นาย|นาง|น\.ส\.|นางสาว|ด\.ช\.|ด\.ญ\.|เด็กชาย|เด็กหญิง|Miss |Mr\. |Mrs\. |Ms\. )/,'').split(' ')[0];
   const done=q.s==='d';
@@ -2574,9 +2586,6 @@ function qViewRecord(pid, name, ph, event){
 //  👨‍👨‍👦‍👦 MULTI-SELECT MODE + AI ANALYSIS (Gemini)
 //  แปลงจาก patch_multiselect_for_DentalAccounting.py
 // ══════════════════════════════════════════════════════════
-
-let _msMode = false;
-let _selectedUids = new Set();   // uid ของ queue entry ที่เลือก
 
 // ── Toggle Multi-Select Mode ──────────────────────────────
 function toggleMultiselect() {
