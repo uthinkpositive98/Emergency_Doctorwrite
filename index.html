@@ -837,6 +837,7 @@ function initCv(){
 }
 function szCv(){
   const wrap=document.getElementById("cvWrap");
+  if(wrap&&wrap._isFs) return; // อยู่ใน fullscreen ไม่ต้อง resize
   const w=wrap.getBoundingClientRect().width||wrap.offsetWidth||800;
   if(w<10) return; // ยังไม่พร้อม รอก่อน
   const dpr=window.devicePixelRatio||1;
@@ -878,14 +879,28 @@ function toggleCvFullscreen(){
   const wrap=document.getElementById('cvWrap');
   const btn=document.getElementById('btnFull');
   if(!wrap._isFs){
-    // เข้า fullscreen
+    // เข้า fullscreen จริง (OS-level)
+    const el=document.documentElement;
+    const goFs=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen;
+    if(goFs) goFs.call(el);
     wrap._origStyle=wrap.getAttribute('style')||'';
     wrap.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:#fff;border-radius:0;';
-    const cv=document.getElementById('drawCv');
-    cv._origW=cv.width; cv._origH=cv.height;
-    cv.width=window.innerWidth; cv.height=window.innerHeight;
-    btn.textContent='✕ ออก Full'; btn.style.background='#ffcdd2'; btn.style.color='#c62828';
     wrap._isFs=true;
+    btn.textContent='✕ ออก Full'; btn.style.background='#ffcdd2'; btn.style.color='#c62828';
+    // ปรับ canvas ให้เต็มจอจริง (รอ fullscreen เสร็จก่อน)
+    setTimeout(()=>{
+      const dpr=window.devicePixelRatio||1;
+      const W=window.screen.width, H=window.screen.height;
+      const cv=document.getElementById('drawCv');
+      let saved=null;
+      try{saved=ctx.getImageData(0,0,cv.width,cv.height);}catch(e){}
+      cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+      cv.style.width=W+'px'; cv.style.height=H+'px';
+      ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr,dpr);
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      if(saved) try{ctx.putImageData(saved,0,0);}catch(e){}
+      ctx.lineJoin='round'; ctx.lineCap='round';
+    },200);
     // ปุ่มบันทึกลอยกลางล่าง
     const fsBtn=document.createElement('button');
     fsBtn.id='fsSaveBtn';
@@ -893,9 +908,12 @@ function toggleCvFullscreen(){
     fsBtn.style.cssText='position:fixed;bottom:32px;left:50%;transform:translateX(-50%);z-index:10000;padding:16px 48px;font-size:18px;font-weight:700;background:linear-gradient(135deg,#2bb5a0,#1a8a78);color:#fff;border:none;border-radius:16px;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,0.25);font-family:Sarabun,Arial,sans-serif;';
     fsBtn.onclick=()=>saveUp();
     document.body.appendChild(fsBtn);
-    // กด Esc ออกได้
+    // Esc / fullscreenchange ออกได้
     wrap._escHandler=(e)=>{ if(e.key==='Escape') exitCvFullscreen(); };
     document.addEventListener('keydown',wrap._escHandler);
+    wrap._fsChangeHandler=()=>{ if(!document.fullscreenElement&&!document.webkitFullscreenElement) exitCvFullscreen(); };
+    document.addEventListener('fullscreenchange',wrap._fsChangeHandler);
+    document.addEventListener('webkitfullscreenchange',wrap._fsChangeHandler);
   } else {
     exitCvFullscreen();
   }
@@ -904,14 +922,21 @@ function exitCvFullscreen(){
   const wrap=document.getElementById('cvWrap');
   const btn=document.getElementById('btnFull');
   if(!wrap||!wrap._isFs) return;
+  wrap._isFs=false;
+  // ออก OS fullscreen
+  const ex=document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen||document.msExitFullscreen;
+  if(ex && (document.fullscreenElement||document.webkitFullscreenElement)) ex.call(document);
+  // ลบปุ่มบันทึก
   const fsBtn=document.getElementById('fsSaveBtn'); if(fsBtn) fsBtn.remove();
   wrap.setAttribute('style',wrap._origStyle||'');
-  const cv=document.getElementById('drawCv');
-  if(cv._origW) cv.width=cv._origW;
-  if(cv._origH) cv.height=cv._origH;
   btn.textContent='F ⛶'; btn.style.background='#e8eaf6'; btn.style.color='#283593';
-  wrap._isFs=false;
   if(wrap._escHandler) document.removeEventListener('keydown',wrap._escHandler);
+  if(wrap._fsChangeHandler){
+    document.removeEventListener('fullscreenchange',wrap._fsChangeHandler);
+    document.removeEventListener('webkitfullscreenchange',wrap._fsChangeHandler);
+  }
+  // ปรับ canvas กลับ
+  setTimeout(szCv, 100);
 }
 function setTool(t){curTool=t;document.getElementById("bpen").classList.toggle("on",t==="pen");document.getElementById("bera").classList.toggle("on",t==="eraser");}
 function setClr(el){curColor=el.dataset.c;setTool("pen");document.querySelectorAll(".cdot").forEach(d=>d.classList.remove("on"));el.classList.add("on");}
@@ -1933,9 +1958,8 @@ function mkCard(q){
       document.getElementById('prof')?.classList.add('show');
     }
     switchTab('search');
-    const wtb=document.getElementById('writeToggleBtn');
-    if(wtb) wtb.style.display='flex';
-    setTimeout(()=>document.getElementById('pane-search')?.scrollIntoView({behavior:'smooth'}),80);
+    // เปิดส่วนเขียนบันทึกทันที ไม่ต้องกดปุ่มม่วงอีกที
+    setTimeout(()=>showWrite(), 60);
   };
   d.innerHTML=`
 <div class="pch">
